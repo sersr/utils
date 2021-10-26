@@ -79,6 +79,12 @@ class EventQueue {
     return _tempQueues[listKey]?.runner;
   }
 
+  static bool? getQueueState(key, {int channels = 1}) {
+    final listKey = ListKey([key, channels]);
+
+    return _tempQueues[listKey]?.actived;
+  }
+
   static int checkTempQueueLength() {
     return _tempQueues.length;
   }
@@ -90,15 +96,8 @@ class EventQueue {
   Future<void>? _runner;
   Future<void>? get runner => _runner;
 
-  void run() {
-    _runner ??= _run()
-      ..whenComplete(() {
-        _runner = null;
-
-        /// `完成`是微任务异步，存在任务池不为空的可能
-        if (_taskPool.isNotEmpty) run();
-      });
-  }
+  bool _active = false;
+  bool get actived => _active;
 
   Future<T> _addEventTask<T>(EventCallback<T> callback,
       {bool onlyLastOne = false, Object? taskKey}) {
@@ -222,6 +221,11 @@ class EventQueue {
     }
   }
 
+  void run() {
+    if (_active) return;
+    _runner = _run();
+  }
+
   /// 依赖于事件循环机制
   ///
   /// 每次循环都要进入一次事件循环等待，确保在循环中不会占用资源，flutter会自动判断要运行的任务
@@ -252,14 +256,14 @@ class EventQueue {
   /// 中是否包含消息异步代码就可以了，否则与同步无异，且本次任务实体未完成(UI 任务一直在队列中)；
   /// `ReceivePort`是通过dart的消息循环实现的，是消息异步，几乎所有的`通信`都是消息异步
   Future<void> _run() async {
+    _active = true;
     while (_taskPool.isNotEmpty) {
       await releaseUI;
 
       final task = _taskPool.removeFirst();
       //                      最后一个
       if (!task.onlyLastOne || _taskPool.isEmpty) {
-        // 最后一个不管怎样都会执行
-        assert(!task.ignore || _taskPool.isEmpty);
+        assert(task.notIgnoreOrNull || _taskPool.isEmpty);
 
         await _runImpl(task);
       } else {
@@ -285,8 +289,7 @@ class EventQueue {
         task._complete();
       }
     }
-
-    assert(_tasks.isEmpty);
+    _active = false;
   }
 }
 
@@ -317,19 +320,16 @@ class _TaskEntry<T> {
   /// 不管 [onlyLastOne] 为任何值，最后一个任务都会执行
   final bool onlyLastOne;
 
-  //TODO: 需要子任务吗?
-  List<_TaskEntry>? _ovserves;
-
-  void add(_TaskEntry ovserve) {
-    _ovserves ??= <_TaskEntry>[];
-    _ovserves!.add(ovserve);
-  }
-
   bool get ignore => _taskIgnore?.ignore == true;
-  bool get notIgnore => _taskIgnore?.ignore == false;
+  bool get notIgnoreOrNull => !ignore;
 
+  bool get notIgnore => _taskIgnore?.ignore == false;
   void _ignore(bool v) {
     _taskIgnore?.ignore = v;
+  }
+
+  bool isCurrentQueue(EventQueue queue) {
+    return _eventQueue == queue;
   }
 
   // 共享一个对象
@@ -435,12 +435,13 @@ class _TaskIgnore {
 }
 
 /// 进入 事件循环，
-Future<void> get releaseUI => Future(_empty);
+/// flutter engine 根据任务类型是否立即执行事件回调
+/// 后续的任务会在恰当的时机运行，比如帧渲染优先等
+// Future<void> get releaseUI => Future(_empty);
+// void _empty() {}
 
-// Future<void> get releaseUI => release(Duration.zero);
+Future<void> get releaseUI => release(Duration.zero);
 Future<void> release(Duration time) => Future.delayed(time);
-
-void _empty() {}
 
 extension EventsPush<T> on FutureOr<T> Function() {
   void push(EventQueue events, {Object? taskKey}) {
