@@ -320,6 +320,7 @@ class _TaskEntry<T> {
   /// 不管 [onlyLastOne] 为任何值，最后一个任务都会执行
   final bool onlyLastOne;
 
+  bool get canDiscard => !_eventQueue.isLast && onlyLastOne;
   bool get ignore => _taskIgnore?.ignore == true;
   bool get notIgnoreOrNull => !ignore;
 

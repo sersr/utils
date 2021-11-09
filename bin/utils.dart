@@ -92,7 +92,7 @@ String getToCamel(String name) {
   return name.replaceAllMapped(RegExp('_([A-Za-z]+)'), (match) {
     final data = match[1]!;
     final first = data.substring(0, 1).toUpperCase();
-    final second = data.substring(1).toLowerCase();
+    final second = data.substring(1);
     return '$first$second';
   });
 }
@@ -131,14 +131,14 @@ class MapIsClass {
     final top = parent == null
         ? 'import \'package:json_annotation/json_annotation.dart\';\n\n'
             'part \'${getDartFileName(keyName)}.g.dart\';\n\n'
-            '@JsonSerializable()'
+            '@JsonSerializable(explicitToJson: true)'
         : '@JsonSerializable(explicitToJson: true)';
 
     buffer
       ..write(top)
       ..write('\n')
       ..write('class $getClassName {\n')
-      ..write('  $getClassName({');
+      ..write('  const $getClassName({');
 
     final fields = StringBuffer();
 
@@ -153,11 +153,13 @@ class MapIsClass {
         valueType = childFile.getClassName;
       } else if (childData is List) {
         if (childData.isNotEmpty) {
-          final listItemData = childData.first as Map<String, Object?>;
-          final childFile = MapIsClass(listItemData, key, parent: this)
-            ..parser();
-          children.add(childFile);
-          valueType = 'List<${childFile.getClassName}>';
+          final listItemData = childData.first;
+          if (listItemData is Map<String, Object?>) {
+            final childFile = MapIsClass(listItemData, key, parent: this)
+              ..parser();
+            children.add(childFile);
+            valueType = 'List<${childFile.getClassName}?>';
+          }
         }
       }
       if (valueType.isEmpty) {
