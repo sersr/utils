@@ -67,27 +67,35 @@ abstract class Log {
         name = name.padRight(functionLength);
       }
     }
-    if (!Platform.isIOS) {
-      switch (lv) {
-        case 0:
-          addMsg = '\x1B[39m';
-          break;
-        case 1:
-          addMsg = '\x1B[33m';
-          break;
-        case 2:
-          addMsg = '\x1B[31m';
-          break;
-        default:
-          addMsg = '';
-      }
-    }
 
     addMsg = '$addMsg$name|$message.';
 
-    if (!Platform.isIOS) addMsg = '$addMsg\x1B[0m';
+    if (!Platform.isIOS) {
+      var start = '';
+      switch (lv) {
+        case 0:
+          start = '\x1B[39m';
+          break;
+        case 1:
+          start = '\x1B[33m';
+          break;
+        case 2:
+          start = '\x1B[31m';
+          break;
+        default:
+          start = '';
+      }
+      addMsg = '$start$addMsg\x1B[0m';
+    }
 
-    if (showPath) addMsg = '$addMsg $path';
+    if (showPath) {
+      if (_debugMode) {
+        addMsg = '$addMsg $path';
+      } else {
+        var _path = path.replaceAll(')', '');
+        addMsg = '$addMsg ${_path}:1)';
+      }
+    }
 
     // ignore: avoid_print
     zone.print(addMsg);
