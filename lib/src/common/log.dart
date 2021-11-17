@@ -4,12 +4,12 @@ import 'dart:io';
 
 import 'dart:math' as math;
 
-const bool _releaseMode =
+const bool releaseMode =
     bool.fromEnvironment('dart.vm.product', defaultValue: false);
 
-const bool _profileMode =
+const bool profileMode =
     bool.fromEnvironment('dart.vm.profile', defaultValue: false);
-const bool _debugMode = !_releaseMode && !_profileMode;
+const bool debugMode = !releaseMode && !profileMode;
 
 abstract class Log {
   static const int info = 0;
@@ -35,14 +35,18 @@ abstract class Log {
   }
 
   static bool log(int lv, Object? message,
-      {bool showPath = true, bool onlyDebug = true, Zone? zone}) {
-    return _log(lv, message, StackTrace.current, showPath, onlyDebug, zone);
+      {bool showPath = true,
+      StackTrace? stackTrace,
+      bool onlyDebug = true,
+      Zone? zone}) {
+    return _log(lv, message, stackTrace ?? StackTrace.current, showPath,
+        onlyDebug, zone);
   }
 
   static bool _log(int lv, Object? message, StackTrace stackTrace,
       bool showPath, bool onlyDebug,
       [Zone? zone]) {
-    if (message == null || (!_debugMode && onlyDebug)) return true;
+    if (message == null || (!debugMode && onlyDebug)) return true;
     zone ??= Zone.current;
     var addMsg = '';
 
@@ -51,14 +55,12 @@ abstract class Log {
     final st = stackTrace.toString();
 
     final sp = LineSplitter.split(st).toList();
-
     final spl = sp[1].split(RegExp(r' +'));
 
     if (spl.length >= 3) {
       final _s = spl[1].split('.');
       name =
-          _s.sublist(math.min(1, _s.length), math.min(2, _s.length)).join('.');
-
+          _s.sublist(_s.length <= 1 ? 0 : 1, math.min(2, _s.length)).join('.');
       path = spl.last;
 
       if (name.length > functionLength) {
@@ -73,13 +75,13 @@ abstract class Log {
     if (!Platform.isIOS) {
       var start = '';
       switch (lv) {
-        case 0:
+        case info:
           start = '\x1B[39m';
           break;
-        case 1:
+        case warn:
           start = '\x1B[33m';
           break;
-        case 2:
+        case error:
           start = '\x1B[31m';
           break;
         default:
@@ -89,11 +91,11 @@ abstract class Log {
     }
 
     if (showPath) {
-      if (_debugMode) {
+      if (debugMode) {
         addMsg = '$addMsg $path';
       } else {
         var _path = path.replaceAll(')', '');
-        addMsg = '$addMsg ${_path}:1)';
+        addMsg = '$addMsg $_path:1)';
       }
     }
 
