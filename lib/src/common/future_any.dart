@@ -53,12 +53,14 @@ class FutureAny {
     }
   }
 
-  void add(Future task) {
-    _tasks.add(task
-      ..whenComplete(() {
-        _tasks.remove(task);
-        _completed();
-      }));
+  void add(FutureOr task) {
+    if (task is Future) {
+      _tasks.add(task
+        ..whenComplete(() {
+          _tasks.remove(task);
+          _completed();
+        }));
+    }
   }
 
   void addAll(Iterable<Future> tasks) {
