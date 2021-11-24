@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   args: ^2.3.0
+  characters: ^1.2.0
   equatable: ^2.0.3
   process: ^4.2.3
 
