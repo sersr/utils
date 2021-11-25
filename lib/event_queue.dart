@@ -161,8 +161,10 @@ class EventQueue {
   @pragma('vm:prefer-inline')
   void _checkError() {
     assert(() {
+      final currentTask = EventQueue.currentTask;
       if (_state == _ChannelState.one &&
-          EventQueue.currentTask?._eventQueue == this) {
+          currentTask?._eventQueue == this &&
+          !currentTask!._outCompleter.isCompleted) {
         throw AwaitEventException(
           '在单通道(channels == 1)且在另一个任务(同一个队列)中，不应该使用`await`,'
           '可以考虑使用`addEventTask`或`addOneEventTask`',
