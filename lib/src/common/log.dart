@@ -100,7 +100,12 @@ abstract class Log {
         end = '$end $_path:1)';
       }
     }
-    final split = '$message'.split('\n').expand((e) => splitString(e)).toList();
+    List<String> split;
+    if (message is Iterable) {
+      split = message.expand((element) => splitString(element)).toList();
+    } else {
+      split = '$message'.split('\n').expand((e) => splitString(e)).toList();
+    }
 
     for (var i = 0; i < split.length; i++) {
       if (i < split.length - 1) {
@@ -112,26 +117,27 @@ abstract class Log {
     return true;
   }
 
-  static List<String> splitString(Object source) {
+  static List<String> splitString(Object source, {int lines = 0}) {
     final rawSource = source.toString().characters;
     final length = rawSource.length;
     final list = <String>[];
-    if (length == 0) return list;
+    if (length == 0) return ['$source'];
     const maxLength = 110;
+    var lineCount = 0;
     for (var i = 0; i < length;) {
       final end = math.min(i + 84, length);
       final subC = rawSource.getRange(i, end);
       final sub = subC.toString();
-      var count = 0;
+      var small = true;
       if (sub.length > maxLength / 2) {
         for (var element in sub.codeUnits) {
-          if (element >= 19968 && element <= 40869) count++;
-          if (count > 5) {
+          if (element >= 19968 && element <= 40869) {
+            small = false;
             break;
           }
         }
       }
-      if (count <= 5) {
+      if (small) {
         list.add(sub);
         i = end;
       } else {
@@ -154,6 +160,10 @@ abstract class Log {
         final source = buffer.toString();
         i += source.characters.length;
         list.add(source);
+      }
+      lineCount++;
+      if (lines > 0 && lineCount >= lines) {
+        break;
       }
     }
     return list;
