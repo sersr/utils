@@ -19,33 +19,51 @@ abstract class Log {
   static int functionLength = 18;
 
   static bool i(Object? info,
-      {bool showPath = true, bool onlyDebug = true, Zone? zone}) {
-    return _log(Log.info, info, StackTrace.current, showPath, onlyDebug, zone);
+      {bool showPath = true,
+      bool onlyDebug = true,
+      int lines = 0,
+      Zone? zone}) {
+    return _log(
+        Log.info, info, StackTrace.current, showPath, onlyDebug, zone, lines);
   }
 
   static bool w(Object? warn,
-      {bool showPath = true, bool onlyDebug = true, Zone? zone}) {
-    return _log(Log.warn, warn, StackTrace.current, showPath, onlyDebug, zone);
+      {bool showPath = true,
+      bool onlyDebug = true,
+      int lines = 0,
+      Zone? zone}) {
+    return _log(
+        Log.warn, warn, StackTrace.current, showPath, onlyDebug, zone, lines);
   }
 
   static bool e(Object? error,
-      {bool showPath = true, bool onlyDebug = true, Zone? zone}) {
+      {bool showPath = true,
+      bool onlyDebug = true,
+      int lines = 0,
+      Zone? zone}) {
     return _log(
-        Log.error, error, StackTrace.current, showPath, onlyDebug, zone);
+        Log.error, error, StackTrace.current, showPath, onlyDebug, zone, lines);
   }
 
   static bool log(int lv, Object? message,
       {bool showPath = true,
       StackTrace? stackTrace,
       bool onlyDebug = true,
+      int lines = 0,
       Zone? zone}) {
     return _log(lv, message, stackTrace ?? StackTrace.current, showPath,
-        onlyDebug, zone);
+        onlyDebug, zone, lines);
   }
 
-  static bool _log(int lv, Object? message, StackTrace stackTrace,
-      bool showPath, bool onlyDebug,
-      [Zone? zone]) {
+  static bool _log(
+    int lv,
+    Object? message,
+    StackTrace stackTrace,
+    bool showPath,
+    bool onlyDebug, [
+    Zone? zone,
+    int lines = 0,
+  ]) {
     if (message == null || (!debugMode && onlyDebug)) return true;
     zone ??= Zone.current;
     var start = '';
@@ -102,9 +120,14 @@ abstract class Log {
     }
     List<String> split;
     if (message is Iterable) {
-      split = message.expand((element) => splitString(element)).toList();
+      split = message
+          .expand((element) => splitString(element, lines: lines))
+          .toList();
     } else {
-      split = '$message'.split('\n').expand((e) => splitString(e)).toList();
+      split = '$message'
+          .split('\n')
+          .expand((e) => splitString(e, lines: lines))
+          .toList();
     }
 
     for (var i = 0; i < split.length; i++) {
