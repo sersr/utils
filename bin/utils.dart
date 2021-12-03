@@ -89,7 +89,7 @@ String getDartFileName(String fileName) {
 }
 
 String getToCamel(String name) {
-  return name.replaceAllMapped(RegExp('_([A-Za-z]+)'), (match) {
+  return name.replaceAllMapped(RegExp('[_-]([A-Za-z]+)'), (match) {
     final data = match[1]!;
     final first = data.substring(0, 1).toUpperCase();
     final second = data.substring(1);

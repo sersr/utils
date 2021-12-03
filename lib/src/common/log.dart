@@ -10,6 +10,7 @@ const bool releaseMode =
 const bool profileMode =
     bool.fromEnvironment('dart.vm.profile', defaultValue: false);
 const bool debugMode = !releaseMode && !profileMode;
+const _colors = ['\x1B[39m', '\x1B[33m', '\x1B[31m'];
 
 abstract class Log {
   static const int info = 0;
@@ -17,6 +18,39 @@ abstract class Log {
   static const int error = 2;
   static int level = 0;
   static int functionLength = 18;
+  static Future<R> logRun<R>(Future<R> Function() body) async {
+    var lastPrint = '';
+    var count = 1;
+    return runZoned(body,
+        zoneSpecification: ZoneSpecification(print: (s, d, z, line) {
+      if (!debugMode) {
+        d.print(z, line);
+        return;
+      }
+      if (lastPrint != line) {
+        d.print(z, line);
+        lastPrint = line;
+        count = 1;
+        return;
+      } else {
+        if (line.length > 24) {
+          var package = '';
+          line.replaceAllMapped(_reg, (match) {
+            package = '${match[0]}';
+            return '';
+          });
+
+          if (package.isNotEmpty) {
+            count++;
+            final func = line.substring(0, 24);
+            d.print(z, '$func $count ^$package');
+            return;
+          }
+        }
+        d.print(z, line);
+      }
+    }));
+  }
 
   static bool i(Object? info,
       {bool showPath = true,
@@ -93,18 +127,8 @@ abstract class Log {
 
     if (!Platform.isIOS) {
       var s = '';
-      switch (lv) {
-        case info:
-          s = '\x1B[39m';
-          break;
-        case warn:
-          s = '\x1B[33m';
-          break;
-        case error:
-          s = '\x1B[31m';
-          break;
-        default:
-          s = '';
+      if (lv <= 2) {
+        s = _colors[lv];
       }
       start = '$s$start';
       end = '\x1B[0m';
@@ -121,11 +145,13 @@ abstract class Log {
     List<String> split;
     if (message is Iterable) {
       split = message
-          .expand((element) => splitString(element, lines: lines))
+          .expand((e) => '$e'.split('\n').where((e) => e.isNotEmpty))
+          .expand((e) => splitString(e, lines: lines))
           .toList();
     } else {
       split = '$message'
           .split('\n')
+          .where((e) => e.isNotEmpty)
           .expand((e) => splitString(e, lines: lines))
           .toList();
     }
@@ -134,14 +160,22 @@ abstract class Log {
       if (i < split.length - 1) {
         zone.print('$start${split[i]}');
       } else {
-        zone.print('$start${split[i]}$end');
+        var data = split[i];
+        if (data.contains(_reg)) {
+          data = '$data\n';
+        }
+        zone.print('$start$data$end');
       }
     }
     return true;
   }
 
+  static final _reg = RegExp(r'\([(package)|(dart)].+:.*\)');
+
   static List<String> splitString(Object source, {int lines = 0}) {
-    final rawSource = source.toString().characters;
+    final _s = source.toString();
+    if (_s.contains(_reg)) return [_s];
+    final rawSource = _s.characters;
     final length = rawSource.length;
     final list = <String>[];
     if (length == 0) return ['$source'];
