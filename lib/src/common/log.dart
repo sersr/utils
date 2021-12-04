@@ -34,18 +34,11 @@ abstract class Log {
         return;
       } else {
         if (line.length > 24) {
-          var package = '';
-          line.replaceAllMapped(_reg, (match) {
-            package = '${match[0]}';
-            return '';
-          });
-
-          if (package.isNotEmpty) {
-            count++;
-            final func = line.substring(0, 24);
-            d.print(z, '$func $count ^$package');
-            return;
-          }
+          count++;
+          final func = line.substring(0, 24);
+          final message = line.substring(24);
+          d.print(z, '$func$count>$message');
+          return;
         }
         d.print(z, line);
       }
