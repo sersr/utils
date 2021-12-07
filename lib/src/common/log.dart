@@ -148,9 +148,12 @@ abstract class Log {
           .expand((e) => splitString(e, lines: lines))
           .toList();
     }
-
+    var limitLength = split.length - 1;
+    if (lines > 0) {
+      limitLength = math.min(lines, limitLength);
+    }
     for (var i = 0; i < split.length; i++) {
-      if (i < split.length - 1) {
+      if (i < limitLength) {
         zone.print('$start${split[i]}');
       } else {
         var data = split[i];
@@ -158,6 +161,7 @@ abstract class Log {
           data = '$data\n';
         }
         zone.print('$start$data$end');
+        break;
       }
     }
     return true;
