@@ -6,7 +6,7 @@ import 'dart:math' as math;
 
 const bool releaseMode =
     bool.fromEnvironment('dart.vm.product', defaultValue: false);
-
+const kDartIsWeb = identical(0, 0.0);
 const bool profileMode =
     bool.fromEnvironment('dart.vm.profile', defaultValue: false);
 const bool debugMode = !releaseMode && !profileMode;
@@ -104,21 +104,27 @@ abstract class Log {
     final spl = sp[1].split(RegExp(r' +'));
 
     if (spl.length >= 3) {
-      final _s = spl[1].split('.');
-      name =
-          _s.sublist(_s.length <= 1 ? 0 : 1, math.min(2, _s.length)).join('.');
-      path = spl.last;
+      if (!kDartIsWeb) {
+        final _s = spl[1].split('.');
+        name = _s
+            .sublist(_s.length <= 1 ? 0 : 1, math.min(2, _s.length))
+            .join('.');
+        path = spl.last;
 
-      if (name.length > functionLength) {
-        name = '${name.substring(0, functionLength - 3)}...';
+        if (name.length > functionLength) {
+          name = '${name.substring(0, functionLength - 3)}...';
+        } else {
+          name = name.padRight(functionLength);
+        }
       } else {
-        name = name.padRight(functionLength);
+        name = spl[1];
       }
     }
+    if (!kDartIsWeb) {
+      start = '$start$name|';
+    }
 
-    start = '$start$name|';
-
-    if (!Platform.isIOS) {
+    if (kDartIsWeb || !Platform.isIOS) {
       var s = '';
       if (lv <= 2) {
         s = _colors[lv];
@@ -126,8 +132,7 @@ abstract class Log {
       start = '$s$start';
       end = '\x1B[0m';
     }
-
-    if (showPath) {
+    if (!kDartIsWeb && showPath) {
       if (debugMode) {
         end = '$end $path';
       } else {
@@ -135,6 +140,7 @@ abstract class Log {
         end = '$end $_path:1)';
       }
     }
+
     List<String> split;
     if (message is Iterable) {
       split = message
@@ -167,32 +173,29 @@ abstract class Log {
     return true;
   }
 
-  static final _reg = RegExp(r'\([(package)|(dart)].+:.*\)');
+  static final _reg = RegExp(r'\((package|dart):.*\)');
 
-  static List<String> splitString(Object source, {int lines = 0}) {
+  static Iterable<String> splitString(Object source, {int lines = 0}) sync* {
     final _s = source.toString();
-    if (_s.contains(_reg)) return [_s];
+    if (_reg.hasMatch(_s) || _s.isEmpty) {
+      // final first = _reg.firstMatch(_s);
+      // print('first: ${first?[0]}');
+      yield _s;
+      return;
+    }
     final rawSource = _s.characters;
     final length = rawSource.length;
-    final list = <String>[];
-    if (length == 0) return ['$source'];
     const maxLength = 110;
+    const halfLength = maxLength / 2;
     var lineCount = 0;
+
     for (var i = 0; i < length;) {
-      final end = math.min(i + 84, length);
+      final end = math.min(i + maxLength, length);
       final subC = rawSource.getRange(i, end);
       final sub = subC.toString();
-      var small = true;
-      if (sub.length > maxLength / 2) {
-        for (var element in sub.codeUnits) {
-          if (element >= 19968 && element <= 40869) {
-            small = false;
-            break;
-          }
-        }
-      }
-      if (small) {
-        list.add(sub);
+
+      if (sub.length <= halfLength) {
+        yield sub;
         i = end;
       } else {
         final buffer = StringBuffer();
@@ -213,13 +216,12 @@ abstract class Log {
         }
         final source = buffer.toString();
         i += source.characters.length;
-        list.add(source);
+        yield source;
       }
       lineCount++;
       if (lines > 0 && lineCount >= lines) {
         break;
       }
     }
-    return list;
   }
 }

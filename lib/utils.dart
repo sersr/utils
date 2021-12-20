@@ -8,3 +8,5 @@ export 'src/common/log.dart';
 export 'src/common/string_split.dart';
 export 'src/common/test_zone.dart';
 export 'src/common/time.dart';
+export 'src/option.dart';
+export 'src/common/option_ext.dart';

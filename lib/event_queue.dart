@@ -2,6 +2,7 @@ library event_queue;
 
 import 'dart:async';
 import 'dart:collection';
+
 import 'package:utils/utils.dart';
 
 /// [_TaskEntry._run]
@@ -51,8 +52,10 @@ class EventQueue {
     final _queue =
         _tempQueues.putIfAbsent(listKey, () => EventQueue(channels: channels));
     return run(_queue)
-      ..whenComplete(() {
-        if (_queue._taskPool.isEmpty) {
+      ..whenComplete(() async {
+        await release(const Duration(milliseconds: 500));
+        final _q = _tempQueues[listKey];
+        if (!_queue.actived && _q == _queue) {
           _tempQueues.remove(listKey);
         }
       });
