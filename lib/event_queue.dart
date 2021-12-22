@@ -44,48 +44,54 @@ class EventQueue {
 
   static final _tempQueues = <Object, EventQueue>{};
 
-  static Future<T> _runTaskOnQueue<T>(
-      key, Future<T> Function(EventQueue event) run,
+  static S _runTask<S>(key, S Function(EventQueue event) run,
       {int channels = 1}) {
     final listKey = ListKey([key, channels]);
 
     final _queue =
         _tempQueues.putIfAbsent(listKey, () => EventQueue(channels: channels));
     return run(_queue)
-      ..whenComplete(() async {
-        await release(const Duration(milliseconds: 500));
-        final _q = _tempQueues[listKey];
-        if (!_queue.actived && _q == _queue) {
-          _tempQueues.remove(listKey);
-        }
+      ..whenComplete(() {
+        Timer(const Duration(milliseconds: 500), () {
+          final _q = _tempQueues[listKey];
+          if (!_queue.actived && _q == _queue) {
+            _tempQueues.remove(listKey);
+          }
+        });
       });
   }
 
   /// 拥有相同的[key]在会一个队列中
   ///
   /// 如果所有任务都已完成，移除[EventQueue]对象
-  static Future<T> runTaskOnQueue<T>(key, EventCallback<T> task,
-      {int channels = 1}) {
-    return _runTaskOnQueue(key, (event) => event.awaitEventTask(task),
+  static Future<T> runTask<T>(key, EventCallback<T> task, {int channels = 1}) {
+    return _runTask(key, (event) => event.awaitTask(task),
         channels: channels);
   }
 
-  static Future<T?> runOneTaskOnQueue<T>(key, EventCallback<T> task,
-      {int channels = 1}) {
-    return _runTaskOnQueue(key, (event) => event.awaitOneEventTask(task),
+  static Future<T?> runOne<T>(key, EventCallback<T> task, {int channels = 1}) {
+    return _runTask(key, (event) => event.awaitOne(task),
         channels: channels);
   }
 
-  static Future<void>? getQueueRunner(key, {int channels = 1}) {
-    final listKey = ListKey([key, channels]);
-
-    return _tempQueues[listKey]?.runner;
+  static void push<T>(key, EventCallback<T> task, {int channels = 1}) {
+    return _runTask(key, (event) => event.addEventTask(task),
+        channels: channels);
   }
 
-  static bool? getQueueState(key, {int channels = 1}) {
+  static void pushOne<T>(key, EventCallback<T> task, {int channels = 1}) {
+    _runTask(key, (event) => event.addOneEventTask(task), channels: channels);
+  }
+
+  static Future<void> getQueueRunner(key, {int channels = 1}) {
     final listKey = ListKey([key, channels]);
 
-    return _tempQueues[listKey]?.actived;
+    return _tempQueues[listKey]?.runner ?? Future.value(null);
+  }
+
+  static bool getQueueState(key, {int channels = 1}) {
+    final listKey = ListKey([key, channels]);
+    return _tempQueues[listKey]?.actived ?? false;
   }
 
   static int checkTempQueueLength() {
@@ -115,7 +121,7 @@ class EventQueue {
     final key = _task.taskKey;
     final future = _task.future;
     if (key != null) {
-      final keyList = _keyEvents.putIfAbsent(key, () => <_TaskEntry>[]);
+      final keyList = _keyEvents.putIfAbsent(key, () => <_TaskEntry>{});
       if (keyList.isEmpty) {
         _task._taskIgnore = _TaskIgnore(true);
       } else {
@@ -150,13 +156,12 @@ class EventQueue {
   void addOneEventTask<T>(EventCallback<T> callback, {Object? taskKey}) =>
       _addEventTask(callback, onlyLastOne: true, taskKey: taskKey);
 
-  Future<T> awaitEventTask<T>(EventCallback<T> callback, {Object? taskKey}) {
+  Future<T> awaitTask<T>(EventCallback<T> callback, {Object? taskKey}) {
     _checkError();
     return _addEventTask(callback, taskKey: taskKey);
   }
 
-  Future<T?> awaitOneEventTask<T>(EventCallback<T> callback,
-      {Object? taskKey}) {
+  Future<T?> awaitOne<T>(EventCallback<T> callback, {Object? taskKey}) {
     _checkError();
     return _addEventTask(callback, onlyLastOne: true, taskKey: taskKey);
   }
@@ -193,7 +198,7 @@ class EventQueue {
 
   /// 与[channels]关系密切
   final _tasks = FutureAny();
-  final _keyEvents = <Object, List<_TaskEntry>>{};
+  final _keyEvents = <Object, Set<_TaskEntry>>{};
 
   // 运行任务
   @pragma('vm:prefer-inline')
@@ -233,33 +238,7 @@ class EventQueue {
 
   /// 依赖于事件循环机制
   ///
-  /// 每次循环都要进入一次事件循环等待，确保在循环中不会占用资源，flutter会自动判断要运行的任务
-  /// 类别
-  ///
-  /// `flutter engine`中有一个`消息循环`遍历消息队列，UI相关的任务有较高的优先级，会先执行，
-  /// dart 的消息循环在`flutter engine`中被定义为`microTask`，意为不是主要任务，
-  /// 由`Dart_HandleMessage`实现，处理一次dart中的消息，完成之后会再次向`engine`的消息队列
-  /// 注册一个新的任务实体，如此循环往复
-  /// dart中的微任务定义为`observer`，微任务不是单独的任务实体，依附于当前运行的任务实体，而其
-  /// 在dart中的实现是一个链表，并且是实时链接的，是在每次任务实体完成之后调用的，还是占用当前
-  /// 任务实体的时间
-  ///
-  /// 异步(Future)相关：
-  /// 类别：消息异步，微任务异步，同步
-  /// 只有明确调用了[Timer]才是消息异步，才不会一直占用UI时间，把耗时的同步代码块转换为异步，
-  /// 并在中间添加消息异步，如`await Future((){});`，这是一个没有延迟的消息异步，也就是说之
-  /// 后的任务会在下次消息循环被调用，虽然完成时间比较久，但在每一帧中的耗时减少了，不会造成卡顿，
-  /// 这样解决了不得不在主隔离中调用耗时函数的问题
-  ///
-  /// 微任务异步在任务实体完成之后调用并完成
-  ///
-  /// 同步：同步的[Future]对象，有时`异步`是[Future]，但是却不想`异步`，就可以同步的[Future]
-  /// 冒充
-  ///
-  /// 可以自己实现[Future]，它只是一个类，所有的异步概念在`future_impl.dart`中实现，`异步完成`
-  /// 是微任务实现的，所以在使用`await`时判断是否占用UI时间(vsync开始了，还未执行任务)，看异步
-  /// 中是否包含消息异步代码就可以了，否则与同步无异，且本次任务实体未完成(UI 任务一直在队列中)；
-  /// `ReceivePort`是通过dart的消息循环实现的，是消息异步，几乎所有的`通信`都是消息异步
+  /// 执行任务队列
   Future<void> _run() async {
     _active = true;
     while (_taskPool.isNotEmpty) {
@@ -459,11 +438,11 @@ extension EventsPush<T> on FutureOr<T> Function() {
   }
 
   Future<T> pushAwait(EventQueue events, {Object? taskKey}) {
-    return events.awaitEventTask(this, taskKey: taskKey);
+    return events.awaitTask(this, taskKey: taskKey);
   }
 
   Future<T?> pushOneAwait(EventQueue events, {Object? taskKey}) {
-    return events.awaitOneEventTask(this, taskKey: taskKey);
+    return events.awaitOne(this, taskKey: taskKey);
   }
 }
 

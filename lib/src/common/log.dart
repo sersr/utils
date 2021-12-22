@@ -18,7 +18,7 @@ abstract class Log {
   static const int error = 2;
   static int level = 0;
   static int functionLength = 18;
-  static Future<R> logRun<R>(Future<R> Function() body) async {
+  static Future<R> logRun<R>(Future<R> Function() body) {
     var lastPrint = '';
     var count = 1;
     return runZoned(body,

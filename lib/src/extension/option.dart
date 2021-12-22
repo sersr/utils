@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import '../option.dart';
-import '../../future_or_ext.dart';
+import '../match/option.dart';
+import 'future_or.dart';
 
 /// 将其他任何类型转化为[Option]类型
 extension OptionFutureExt<T> on FutureOr<T?> {
