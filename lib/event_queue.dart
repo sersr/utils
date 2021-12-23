@@ -24,7 +24,7 @@ class EventQueue {
   EventQueue({this.channels = 1});
 
   ///所有任务即时运行，[channels] 无限制
-  EventQueue.run() : channels = -1;
+  EventQueue.all() : channels = -1;
   final int channels;
 
   _ChannelState _getState() {
