@@ -65,13 +65,11 @@ class EventQueue {
   ///
   /// 如果所有任务都已完成，移除[EventQueue]对象
   static Future<T> runTask<T>(key, EventCallback<T> task, {int channels = 1}) {
-    return _runTask(key, (event) => event.awaitTask(task),
-        channels: channels);
+    return _runTask(key, (event) => event.awaitTask(task), channels: channels);
   }
 
   static Future<T?> runOne<T>(key, EventCallback<T> task, {int channels = 1}) {
-    return _runTask(key, (event) => event.awaitOne(task),
-        channels: channels);
+    return _runTask(key, (event) => event.awaitOne(task), channels: channels);
   }
 
   static void push<T>(key, EventCallback<T> task, {int channels = 1}) {
@@ -350,12 +348,9 @@ class _TaskEntry<T> {
     assert(EventQueue.currentTask != null);
 
     _innerComplete();
-    Timer.run(() {
-      if (_completed) return;
-      _eventQueue
-        .._taskPool.add(this)
-        ..run();
-    });
+    _eventQueue
+      .._taskPool.add(this)
+      ..run();
   }
 
   bool _completed = false;
@@ -368,8 +363,7 @@ class _TaskEntry<T> {
     if (_completed) return;
 
     _completed = true;
-    // 应该让等待的代码块在下一次事件循环中执行
-    Timer.run(() => _outCompleter.complete(result));
+    _outCompleter.complete(result);
   }
 
   void _completedError(Object error) {
