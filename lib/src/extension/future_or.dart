@@ -3,6 +3,19 @@ import 'dart:async';
 typedef _Callback<S, T> = S Function(T);
 typedef _CombineCallback<S, T> = S Function(S, T);
 
+extension FuturOrNull<T> on FutureOr<T>? {
+  FutureOr<S> andThen<S>(FutureOr<S> Function(T? value) action,
+      {Function? onError}) {
+    final that = this;
+
+    if (that == null) {
+      return action(null);
+    } else {
+      return that.then(action, onError: onError);
+    }
+  }
+}
+
 extension FutureOrFuture<T> on FutureOr<T> {
   FutureOr<S> _innerThen<S>(FutureOr<S> Function(T value) map,
       {Function? onError}) {
