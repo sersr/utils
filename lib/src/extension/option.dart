@@ -7,15 +7,22 @@ import 'future_or.dart';
 extension OptionFutureExt<T> on FutureOr<T?> {
   FutureOr<Option<T>> optionFut() {
     return then((value) {
-      return value == null ? None<T>() : Some(value);
-    }, onError: (e) => None<T>());
+      return value == null ? const None() : value.then(Some.wrap);
+    }, onError: (e) => const None());
   }
 
   FutureOr<S> mapOption<S>(
       {required S Function() ifNone, required S Function(T v) ifSome}) {
-    return then((value) {
-      return value == null ? ifNone() : ifSome(value);
-    }, onError: (e) => ifNone());
+    return mapOptionFut(ifNone: ifNone, ifSome: ifSome);
+  }
+
+  FutureOr<S> mapOptionFut<S>({
+    required FutureOr<S> Function() ifNone,
+    required FutureOr<S> Function(T v) ifSome,
+  }) {
+    return optionFut().then((value) {
+      return value.map(ifNone: ifNone, ifSome: ifSome);
+    });
   }
 }
 
@@ -27,10 +34,37 @@ extension MapOnOption<T> on FutureOr<Option<T>?> {
 
   FutureOr<S> mapOption<S>(
       {required S Function() ifNone, required S Function(T v) ifSome}) {
-    return then((value) {
-      return value == null
-          ? ifNone()
-          : value.map(ifNone: ifNone, ifSome: ifSome);
-    }, onError: (e) => ifNone());
+    return mapOptionFut(ifNone: ifNone, ifSome: ifSome);
+  }
+
+  FutureOr<S> mapOptionFut<S>({
+    required FutureOr<S> Function() ifNone,
+    required FutureOr<S> Function(T v) ifSome,
+  }) {
+    return optionFut().then((value) {
+      return value.map(ifNone: ifNone, ifSome: ifSome);
+    });
+  }
+}
+
+extension OptionFutureOrNull<T> on FutureOr<T>? {
+  FutureOr<Option<T>> andOptionFut() {
+    return andThen((value) {
+      return value == null ? const None() : value.then(Some.wrap);
+    }, onError: (e) => const None());
+  }
+
+  FutureOr<S> andMapOption<S>(
+      {required S Function() ifNone, required S Function(T v) ifSome}) {
+    return andMapOptionFut(ifNone: ifNone, ifSome: ifSome);
+  }
+
+  FutureOr<S> andMapOptionFut<S>({
+    required FutureOr<S> Function() ifNone,
+    required FutureOr<S> Function(T v) ifSome,
+  }) {
+    return andOptionFut().then((value) {
+      return value.map(ifNone: ifNone, ifSome: ifSome);
+    });
   }
 }

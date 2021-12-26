@@ -13,6 +13,7 @@ class None<V> extends Option<V> {
 
 class Some<V> extends Option<V> {
   const Some(this.v);
+  const factory Some.wrap(V v) = Some;
   final V v;
   @override
   S map<S>({required S Function() ifNone, required S Function(V v) ifSome}) =>

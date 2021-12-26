@@ -325,7 +325,6 @@ class _TaskEntry<T> {
   // 队列循环要等待的对象
   Completer<void>? _innerCompleter;
 
-  @pragma('vm:prefer-inline')
   Future<void> _run() async {
     try {
       final result = callback();
@@ -359,6 +358,7 @@ class _TaskEntry<T> {
   ///
   /// 1. [T] 为 void 类型
   /// 2. [onlyLastOne] == true 且被抛弃忽略
+  @pragma('vm:prefer-inline')
   void _complete([T? result]) {
     if (_completed) return;
 
@@ -366,6 +366,7 @@ class _TaskEntry<T> {
     _outCompleter.complete(result);
   }
 
+  @pragma('vm:prefer-inline')
   void _completedError(Object error) {
     if (_completed) return;
 
@@ -373,6 +374,7 @@ class _TaskEntry<T> {
     _outCompleter.completeError(error);
   }
 
+  @pragma('vm:prefer-inline')
   void _innerComplete() {
     if (_innerCompleter != null) {
       assert(!_innerCompleter!.isCompleted);
