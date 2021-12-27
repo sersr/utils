@@ -9,9 +9,9 @@ import 'package:utils/utils.dart';
 typedef EventCallback<T> = FutureOr<T> Function();
 typedef EventRunCallback<T> = Future<void> Function(_TaskEntry<T> task);
 
-/// 以队列的形式进行并等待异步任务。
+/// 以队列的形式进行并等待异步任务
 ///
-/// 目的：确保任务之间的安全性
+/// 目的: 确保任务之间的安全性
 ///
 /// 如果一个异步任务被调用多次或多个异步任务访问相同的数据对象，
 /// 那么在这个任务中所使用的的数据对象将变得不稳定
@@ -152,7 +152,7 @@ class EventQueue {
   ///
   /// 返回的值可能为 null
   void addOneEventTask<T>(EventCallback<T> callback, {Object? taskKey}) =>
-      _addEventTask(callback, onlyLastOne: true, taskKey: taskKey);
+      _addEventTask<T?>(callback, onlyLastOne: true, taskKey: taskKey);
 
   Future<T> awaitTask<T>(EventCallback<T> callback, {Object? taskKey}) {
     _checkError();
