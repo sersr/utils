@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:characters/characters.dart';
 import 'dart:math' as math;
 
+import '../../event_queue.dart';
+
 const bool releaseMode =
     bool.fromEnvironment('dart.vm.product', defaultValue: false);
 const kDartIsWeb = identical(0, 0.0);
@@ -18,9 +20,12 @@ abstract class Log {
   static const int error = 2;
   static int level = 0;
   static int functionLength = 18;
-  static Future<R> logRun<R>(Future<R> Function() body) {
+  static Future<R> logRun<R>(Future<R> Function() body,
+      {bool printEventQueue = false}) {
     var lastPrint = '';
     var count = 1;
+    EventQueue.printWhereUseEventQueue = printEventQueue;
+
     return runZoned(body,
         zoneSpecification: ZoneSpecification(print: (s, d, z, line) {
       if (!debugMode) {
@@ -45,79 +50,125 @@ abstract class Log {
     }));
   }
 
-  static bool i(Object? info,
-      {bool showPath = true,
-      bool onlyDebug = true,
-      int lines = 0,
-      Zone? zone}) {
+  static bool i(
+    Object? info, {
+    bool showPath = true,
+    bool onlyDebug = true,
+    int lines = 0,
+    int position = 0,
+    Zone? zone,
+  }) {
     return _log(
-        Log.info, info, StackTrace.current, showPath, onlyDebug, zone, lines);
+      Log.info,
+      info,
+      showPath,
+      onlyDebug,
+      zone,
+      lines: lines,
+      position: ++position,
+    );
   }
 
-  static bool w(Object? warn,
-      {bool showPath = true,
-      bool onlyDebug = true,
-      int lines = 0,
-      Zone? zone}) {
+  static bool w(
+    Object? warn, {
+    bool showPath = true,
+    bool onlyDebug = true,
+    int lines = 0,
+    int position = 0,
+    Zone? zone,
+  }) {
     return _log(
-        Log.warn, warn, StackTrace.current, showPath, onlyDebug, zone, lines);
+      Log.warn,
+      warn,
+      showPath,
+      onlyDebug,
+      zone,
+      lines: lines,
+      position: ++position,
+    );
   }
 
-  static bool e(Object? error,
-      {bool showPath = true,
-      bool onlyDebug = true,
-      int lines = 0,
-      Zone? zone}) {
+  static bool e(
+    Object? error, {
+    bool showPath = true,
+    bool onlyDebug = true,
+    int lines = 0,
+    int position = 0,
+    Zone? zone,
+  }) {
     return _log(
-        Log.error, error, StackTrace.current, showPath, onlyDebug, zone, lines);
+      Log.error,
+      error,
+      showPath,
+      onlyDebug,
+      zone,
+      lines: lines,
+      position: ++position,
+    );
   }
 
-  static bool log(int lv, Object? message,
-      {bool showPath = true,
-      StackTrace? stackTrace,
-      bool onlyDebug = true,
-      int lines = 0,
-      Zone? zone}) {
-    return _log(lv, message, stackTrace ?? StackTrace.current, showPath,
-        onlyDebug, zone, lines);
+  static bool log(
+    int lv,
+    Object? message, {
+    bool showPath = true,
+    bool onlyDebug = true,
+    int lines = 0,
+    int position = 0,
+    Zone? zone,
+  }) {
+    return _log(
+      lv,
+      message,
+      showPath,
+      onlyDebug,
+      zone,
+      lines: lines,
+      position: ++position,
+    );
   }
+
+  static final reg = RegExp(r' +');
 
   static bool _log(
     int lv,
     Object? message,
-    StackTrace stackTrace,
     bool showPath,
-    bool onlyDebug, [
-    Zone? zone,
+    bool onlyDebug,
+    Zone? zone, {
     int lines = 0,
-  ]) {
+    int position = 1,
+  }) {
     if (message == null || (!debugMode && onlyDebug)) return true;
+    position++;
     zone ??= Zone.current;
     var start = '';
     var end = '';
 
     var path = '', name = '';
 
-    final st = stackTrace.toString();
+    final st = StackTrace.current.toString();
 
     final sp = LineSplitter.split(st).toList();
-    final spl = sp[1].split(RegExp(r' +'));
 
-    if (spl.length >= 3) {
-      if (!kDartIsWeb) {
-        final _s = spl[1].split('.');
-        name = _s
-            .sublist(_s.length <= 1 ? 0 : 1, math.min(2, _s.length))
-            .join('.');
-        path = spl.last;
+    if (sp.length > position) {
+      final spl = sp[position].split(reg);
 
-        if (name.length > functionLength) {
-          name = '${name.substring(0, functionLength - 3)}...';
+      if (spl.length >= 3) {
+        if (!kDartIsWeb) {
+          final _s = spl[1].split('.');
+          name = _s
+              .sublist(_s.length <= 1 ? 0 : 1, math.min(2, _s.length))
+              .join('.');
+          path = spl.last;
+
+          if (name.length > functionLength) {
+            name = '${name.substring(0, functionLength - 3)}...';
+          } else {
+            name = name.padRight(functionLength);
+          }
         } else {
-          name = name.padRight(functionLength);
+          name = spl[1];
         }
-      } else {
-        name = spl[1];
       }
     }
     if (!kDartIsWeb) {

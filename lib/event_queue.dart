@@ -43,20 +43,26 @@ class EventQueue {
   }
 
   static final _tempQueues = <Object, EventQueue>{};
+  static int delayRemove = 5000;
+  static bool printWhereUseEventQueue = false;
 
   static S _runTask<S>(key, S Function(EventQueue event) run,
       {int channels = 1}) {
     final listKey = ListKey([key, channels]);
 
+    assert(!printWhereUseEventQueue || Log.log(Log.warn, '.', position: 2));
+
     final _queue =
         _tempQueues.putIfAbsent(listKey, () => EventQueue(channels: channels));
     return run(_queue)
       ..whenComplete(() {
-        Timer(const Duration(milliseconds: 500), () {
-          final _q = _tempQueues[listKey];
-          if (!_queue.actived && _q == _queue) {
-            _tempQueues.remove(listKey);
-          }
+        _queue.runner.whenComplete(() {
+          Timer(Duration(milliseconds: delayRemove <= 0 ? 0 : delayRemove), () {
+            final _q = _tempQueues[listKey];
+            if (!_queue.actived && _q == _queue) {
+              _tempQueues.remove(listKey);
+            }
+          });
         });
       });
   }

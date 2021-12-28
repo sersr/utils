@@ -11,7 +11,7 @@ extension FuturOrNull<T> on FutureOr<T>? {
     if (that == null) {
       return action(null);
     } else {
-      return that.then(action, onError: onError);
+      return that._innerThen(action, onError: onError);
     }
   }
 }

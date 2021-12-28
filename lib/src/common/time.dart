@@ -45,8 +45,7 @@ extension UseTime<T> on Future<T> {
     if (onlyDebug && !debugMode) return this;
     stack ??= StackTrace.current;
     return useTimeMs((current, useTime) {
-      Log.log(level, 'use: $useTime ms',
-          stackTrace: stack, onlyDebug: onlyDebug);
+      Log.log(level, 'use: $useTime ms', position: 1, onlyDebug: onlyDebug);
     });
   }
 
