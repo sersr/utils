@@ -71,6 +71,10 @@ class EventQueue {
   ///
   /// 如果所有任务都已完成，移除[EventQueue]对象
   static Future<T> runTask<T>(key, EventCallback<T> task, {int channels = 1}) {
+    return run(key, task, channels: channels);
+  }
+
+  static Future<T> run<T>(key, EventCallback<T> task, {int channels = 1}) {
     return _runTask(key, (event) => event.awaitTask(task), channels: channels);
   }
 
@@ -140,7 +144,7 @@ class EventQueue {
         }
       });
     }
-    run();
+    _start();
     return future;
   }
 
@@ -159,31 +163,32 @@ class EventQueue {
   /// 返回的值可能为 null
   void addOneEventTask<T>(EventCallback<T> callback, {Object? taskKey}) =>
       _addEventTask<T?>(callback, onlyLastOne: true, taskKey: taskKey);
-
+  static bool printOnce = false;
   Future<T> awaitTask<T>(EventCallback<T> callback, {Object? taskKey}) {
-    _checkError();
+    if (doNotEnterQueue()) {
+      assert(printOnce || (printOnce = true) && Log.e('note: 此次任务不会进入队列'));
+      return Future.value(callback());
+    }
     return _addEventTask(callback, taskKey: taskKey);
   }
 
   Future<T?> awaitOne<T>(EventCallback<T> callback, {Object? taskKey}) {
-    _checkError();
+    if (doNotEnterQueue()) {
+      assert(printOnce || (printOnce = true) && Log.e('note: 此次任务不会进入队列'));
+      return Future.value(callback());
+    }
     return _addEventTask(callback, onlyLastOne: true, taskKey: taskKey);
   }
 
   @pragma('vm:prefer-inline')
-  void _checkError() {
-    assert(() {
-      final currentTask = EventQueue.currentTask;
-      if (_state == _ChannelState.one &&
-          currentTask?._eventQueue == this &&
-          !currentTask!._outCompleter.isCompleted) {
-        throw AwaitEventException(
-          '在单通道(channels == 1)且在另一个任务(同一个队列)中，不应该使用`await`,'
-          '可以考虑使用`addEventTask`或`addOneEventTask`',
-        );
-      }
-      return true;
-    }());
+  bool doNotEnterQueue() {
+    return _state == _ChannelState.one && _isCurrentQueueAndNotCompleted(this);
+  }
+
+  @pragma('vm:prefer-inline')
+  static bool _isCurrentQueueAndNotCompleted(EventQueue currentQueue) {
+    final localTask = currentTask;
+    return localTask?._eventQueue == currentQueue && !localTask!._completed;
   }
 
   /// 自动选择要调用的函数
@@ -235,7 +240,7 @@ class EventQueue {
     }
   }
 
-  void run() {
+  void _start() {
     if (_active) return;
     _runner = _run();
   }
@@ -355,7 +360,7 @@ class _TaskEntry<T> {
     _innerComplete();
     _eventQueue
       .._taskPool.add(this)
-      ..run();
+      .._start();
   }
 
   bool _completed = false;
