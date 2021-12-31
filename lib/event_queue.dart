@@ -40,6 +40,7 @@ class EventQueue {
   static _TaskEntry? get currentTask {
     final _t = Zone.current[#zoneTask];
     if (_t is _TaskEntry) return _t;
+    return null;
   }
 
   static final _tempQueues = <Object, EventQueue>{};
