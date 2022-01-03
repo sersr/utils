@@ -5,6 +5,8 @@ import 'dart:collection';
 
 import 'package:utils/utils.dart';
 
+final _zoneToken = Object();
+
 /// [_TaskEntry._run]
 typedef EventCallback<T> = FutureOr<T> Function();
 typedef EventRunCallback<T> = Future<void> Function(_TaskEntry<T> task);
@@ -38,23 +40,24 @@ class EventQueue {
   }
 
   static _TaskEntry? get currentTask {
-    final _t = Zone.current[#zoneTask];
+    final _t = Zone.current[_zoneToken];
     if (_t is _TaskEntry) return _t;
     return null;
   }
 
   static final _tempQueues = <Object, EventQueue>{};
   static int delayRemove = 5000;
+
   static bool printWhereUseEventQueue = false;
 
   static S _runTask<S>(key, S Function(EventQueue event) run,
       {int channels = 1}) {
     final listKey = ListKey([key, channels]);
 
-    assert(!printWhereUseEventQueue || Log.log(Log.warn, '.', position: 2));
-
-    final _queue =
-        _tempQueues.putIfAbsent(listKey, () => EventQueue(channels: channels));
+    final _queue = _tempQueues.putIfAbsent(listKey, () {
+      assert(!printWhereUseEventQueue || Log.log(Log.warn, '.', position: 4));
+      return EventQueue(channels: channels);
+    });
     return run(_queue)
       ..whenComplete(() {
         _queue.runner.whenComplete(() {
@@ -71,10 +74,6 @@ class EventQueue {
   /// 拥有相同的[key]在会一个队列中
   ///
   /// 如果所有任务都已完成，移除[EventQueue]对象
-  static Future<T> runTask<T>(key, EventCallback<T> task, {int channels = 1}) {
-    return run(key, task, channels: channels);
-  }
-
   static Future<T> run<T>(key, EventCallback<T> task, {int channels = 1}) {
     return _runTask(key, (event) => event.awaitTask(task), channels: channels);
   }
@@ -213,7 +212,7 @@ class EventQueue {
   // 运行任务
   @pragma('vm:prefer-inline')
   Future<void> eventRun(_TaskEntry task) {
-    return runZoned(task._run, zoneValues: {#zoneTask: task});
+    return runZoned(task._run, zoneValues: {_zoneToken: task});
   }
 
   @pragma('vm:prefer-inline')

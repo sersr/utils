@@ -15,7 +15,7 @@ class OneOverrides extends IOOverrides {
   OneOverrides({this.channels = 1});
 
   Future<R> runTask<R>(Future<R> Function() task) {
-    return EventQueue.runTask(_fileKey, task, channels: channels);
+    return EventQueue.run(_fileKey, task, channels: channels);
   }
 }
 
