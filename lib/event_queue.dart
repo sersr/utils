@@ -163,7 +163,10 @@ class EventQueue {
   /// 返回的值可能为 null
   void addOneEventTask<T>(EventCallback<T> callback, {Object? taskKey}) =>
       _addEventTask<T?>(callback, onlyLastOne: true, taskKey: taskKey);
-  static bool printOnce = false;
+
+  /// 每一个实例提醒一次
+  bool printOnce = false;
+
   Future<T> awaitTask<T>(EventCallback<T> callback, {Object? taskKey}) {
     if (doNotEnterQueue()) {
       assert(printOnce || (printOnce = true) && Log.e('note: 此次任务不会进入队列'));
