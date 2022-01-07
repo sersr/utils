@@ -21,13 +21,14 @@ abstract class Log {
   static int level = 0;
   static int functionLength = 18;
   static Future<R> logRun<R>(Future<R> Function() body,
-      {bool printEventQueue = false}) {
+      {bool printEventQueue = false, bool print = true}) {
     var lastPrint = '';
     var count = 1;
     EventQueue.printWhereUseEventQueue = printEventQueue;
 
     return runZoned(body,
         zoneSpecification: ZoneSpecification(print: (s, d, z, line) {
+      if (!print) return;
       if (!debugMode) {
         d.print(z, line);
         return;
