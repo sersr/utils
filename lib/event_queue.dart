@@ -455,12 +455,3 @@ extension EventsPush<T> on FutureOr<T> Function() {
     return events.awaitOne(this, taskKey: taskKey);
   }
 }
-
-class AwaitEventException implements Exception {
-  AwaitEventException(this.message);
-  final String message;
-  @override
-  String toString() {
-    return '$runtimeType:  $message';
-  }
-}
