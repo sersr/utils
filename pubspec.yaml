@@ -2,6 +2,7 @@ name: utils
 description: dart package
 version: 0.0.1
 homepage:
+publish_to: none
 
 environment:
   sdk: ">=2.15.0 <3.0.0"
@@ -13,7 +14,7 @@ dependencies:
   process: ^4.2.3
   sc_event_queue:
     git:
-      url: https://github.com/sersr/sc_event_queue
+      url: https://github.com/sersr/sc_event_queue.git
 
 dev_dependencies:
   flutter_lints: ^1.0.0
