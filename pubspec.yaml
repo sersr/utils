@@ -11,6 +11,9 @@ dependencies:
   characters: ^1.2.0
   equatable: ^2.0.3
   process: ^4.2.3
+  sc_event_queue:
+    git:
+      url: https://github.com/sersr/sc_event_queue
 
 dev_dependencies:
   flutter_lints: ^1.0.0

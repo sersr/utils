@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:characters/characters.dart';
 import 'dart:math' as math;
 
-import '../../event_queue.dart';
+import 'package:characters/characters.dart';
 
 const bool releaseMode =
     bool.fromEnvironment('dart.vm.product', defaultValue: false);
@@ -20,11 +19,9 @@ abstract class Log {
   static const int error = 2;
   static int level = 0;
   static int functionLength = 18;
-  static Future<R> logRun<R>(Future<R> Function() body,
-      {bool printEventQueue = false, bool print = true}) {
+  static Future<R> logRun<R>(Future<R> Function() body, {bool print = true}) {
     var lastPrint = '';
     var count = 1;
-    EventQueue.printWhereUseEventQueue = printEventQueue;
 
     return runZoned(body,
         zoneSpecification: ZoneSpecification(print: (s, d, z, line) {
